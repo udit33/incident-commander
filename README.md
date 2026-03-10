@@ -27,6 +27,11 @@ Database:
 - Default: `sqlite://./incident_commander.db`
 - Override with `DATABASE_URL`
 
+Auth:
+- Optional API key auth for all incident endpoints via `API_KEY`
+- Send header: `x-api-key: <your-key>`
+- `/health` stays public
+
 ## API (MVP)
 
 ### Health
@@ -48,6 +53,11 @@ curl -X POST http://localhost:3000/incidents \
 ### List Incidents
 ```bash
 curl http://localhost:3000/incidents
+```
+
+### List Incidents (filter + pagination)
+```bash
+curl "http://localhost:3000/incidents?status=open&severity=high&limit=20&offset=0"
 ```
 
 ### Get Incident
