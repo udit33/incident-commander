@@ -2,11 +2,17 @@
 
 MVP backend service for incident lifecycle management.
 
+## Project Docs
+- [Architecture](./ARCHITECTURE.md)
+- [Roadmap](./docs/ROADMAP.md)
+- [ADRs](./docs/adr)
+- [Contributing](./CONTRIBUTING.md)
+
 ## Stack
 - Rust
 - Axum (HTTP API)
 - Tokio (async runtime)
-- In-memory state (for v1 bootstrap)
+- SQLite + sqlx (persistent storage)
 
 ## Run
 ```bash
@@ -16,6 +22,10 @@ cargo run
 
 Server starts on:
 - `http://localhost:3000`
+
+Database:
+- Default: `sqlite://./incident_commander.db`
+- Override with `DATABASE_URL`
 
 ## API (MVP)
 
@@ -55,7 +65,20 @@ curl -X POST http://localhost:3000/incidents/<INCIDENT_ID>/ack
 curl -X POST http://localhost:3000/incidents/<INCIDENT_ID>/resolve
 ```
 
+### Add Incident Note
+```bash
+curl -X POST http://localhost:3000/incidents/<INCIDENT_ID>/notes \
+  -H 'Content-Type: application/json' \
+  -d '{"note":"Investigating DB connection pool saturation"}'
+```
+
+### Get Incident Timeline
+```bash
+curl http://localhost:3000/incidents/<INCIDENT_ID>/timeline
+```
+
 ## Notes
 - Severity enum: `low | medium | high | critical`
 - Status flow: `open -> acknowledged -> resolved`
+- Every incident stores an event timeline (`created`, `status_changed`, `note_added`)
 - Data resets on restart (in-memory store)
