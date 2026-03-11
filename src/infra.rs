@@ -11,12 +11,19 @@ pub enum AppError {
     Db(#[from] sqlx::Error),
     #[error("invalid data: {0}")]
     InvalidData(String),
+    #[error("invalid transition: {0}")]
+    InvalidTransition(String),
 }
 
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
+        let status = match self {
+            AppError::InvalidData(_) | AppError::InvalidTransition(_) => StatusCode::BAD_REQUEST,
+            AppError::Db(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
+            status,
             Json(ApiError {
                 error: self.to_string(),
             }),
@@ -131,9 +138,21 @@ pub async fn get_incident_by_id(db: &SqlitePool, id: Uuid) -> Result<Option<Inci
 }
 
 pub async fn update_status(db: &SqlitePool, id: Uuid, status: IncidentStatus) -> Result<Option<Incident>, AppError> {
-    if !incident_exists(db, id).await? {
+    let Some(current) = get_incident_by_id(db, id).await? else {
         return Ok(None);
+    };
+
+    if current.status == status {
+        return Ok(Some(current));
     }
+
+    if !current.status.can_transition_to(&status) {
+        return Err(AppError::InvalidTransition(format!(
+            "{} -> {}",
+            current.status, status
+        )));
+    }
+
     let now = Utc::now();
     sqlx::query("UPDATE incidents SET status = ?1, updated_at = ?2 WHERE id = ?3")
         .bind(status.to_string())

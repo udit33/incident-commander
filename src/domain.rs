@@ -11,6 +11,17 @@ pub enum IncidentStatus {
     Resolved,
 }
 
+impl IncidentStatus {
+    pub fn can_transition_to(&self, next: &IncidentStatus) -> bool {
+        matches!(
+            (self, next),
+            (IncidentStatus::Open, IncidentStatus::Acknowledged)
+                | (IncidentStatus::Open, IncidentStatus::Resolved)
+                | (IncidentStatus::Acknowledged, IncidentStatus::Resolved)
+        )
+    }
+}
+
 impl Display for IncidentStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {

@@ -1,9 +1,4 @@
-mod api;
-mod domain;
-mod infra;
-
-use api::AppState;
-use axum::{middleware, routing::{get, post}, Router};
+use incident_commander::{api::AppState, build_router, infra};
 use std::net::SocketAddr;
 use tracing::info;
 
@@ -23,24 +18,7 @@ async fn main() {
     let db = infra::connect_db(&db_url).await.expect("failed to connect sqlite");
     infra::init_db(&db).await.expect("failed to initialize schema");
 
-    let state = AppState { db, api_key };
-
-    let protected = Router::new()
-        .route("/incidents", get(api::list_incidents).post(api::create_incident))
-        .route("/incidents/{id}", get(api::get_incident))
-        .route("/incidents/{id}/ack", post(api::ack_incident))
-        .route("/incidents/{id}/resolve", post(api::resolve_incident))
-        .route("/incidents/{id}/notes", post(api::add_note))
-        .route("/incidents/{id}/timeline", get(api::get_timeline))
-        .route_layer(middleware::from_fn_with_state(
-            state.clone(),
-            api::auth_middleware,
-        ));
-
-    let app = Router::new()
-        .route("/health", get(api::health))
-        .merge(protected)
-        .with_state(state);
+    let app = build_router(AppState { db, api_key });
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
     info!("incident-commander backend listening on {}", addr);
